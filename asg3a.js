@@ -20,6 +20,7 @@ var FSHADER_SOURCE = `
   uniform vec4 u_FragColor;
   uniform sampler2D u_Sampler0;
   uniform sampler2D u_Sampler1;
+  uniform sampler2D u_Sampler2;
   uniform int u_whichTexture;
   void main() {
     if(u_whichTexture == -2){
@@ -30,7 +31,9 @@ var FSHADER_SOURCE = `
         gl_FragColor = texture2D(u_Sampler0, v_UV);
     } else if (u_whichTexture == 1){
         gl_FragColor = texture2D(u_Sampler1,v_UV);
-    } else {
+    } else if (u_whichTexture == 2){
+        gl_FragColor = texture2D(u_Sampler2,v_UV);
+    } else{
         gl_FragColor = vec4(1,.2,.2,1);
     }
   }`
@@ -48,9 +51,9 @@ let u_ViewMatrix;
 let u_GlobalRotateMatrix;
 let u_Sampler0;
 let u_Sampler1;
+let u_Sampler2;
 let u_whichTexture;
 
-var images = ["grass.jpg","sky.jpg"]
 
 // Classes //
 
@@ -243,7 +246,7 @@ class Cube{
         this.type = "cube";;
         this.color = [1.0,1.0,1.0,1.0];
         this.matrix = new Matrix4();
-        this.textureNum = 0;
+        this.textureNum = -2;
     }
 
     render(){
@@ -265,13 +268,13 @@ class Cube{
 
         gl.uniform4f(u_FragColor,rgba[0]*.9,rgba[1]*.9,rgba[2]*.9,rgba[3]);
 
-        drawTriangle3DUV([0.0,1.0,0.0, 0.0,1.0,1.0, 1.0,1.0,1.0],[0,1, 0,1, 1,1]);
-        drawTriangle3DUV([0.0,1.0,0.0, 1.0,1.0,1.0, 1.0,1.0,0.0],[0,1, 1,1, 1,1]);
+        drawTriangle3DUV([0.0,1.0,0.0, 0.0,1.0,1.0, 1.0,1.0,1.0],[0,0, 0,1, 1,1]);
+        drawTriangle3DUV([0.0,1.0,0.0, 1.0,1.0,1.0, 1.0,1.0,0.0],[0,0, 1,1, 1,0]);
               
         gl.uniform4f(u_FragColor,rgba[0]*.8,rgba[1]*.8,rgba[2]*.8,rgba[3]);
 
-        drawTriangle3DUV([1.0,1.0,1.0, 1.0,0.0,1.0, 1.0,1.0,0.0],[1,1, 1,0, 1,1]);
-        drawTriangle3DUV([1.0,0.0,0.0, 1.0,0.0,1.0, 1.0,1.0,0.0],[1,0, 1,0, 1,1]);
+        drawTriangle3DUV([1.0,1.0,1.0, 1.0,0.0,1.0, 1.0,1.0,0.0],[1,1, 0,1, 1,0]);
+        drawTriangle3DUV([1.0,0.0,0.0, 1.0,0.0,1.0, 1.0,1.0,0.0],[0,0, 0,1, 1,0]);
 
         gl.uniform4f(u_FragColor,rgba[0]*.9,rgba[1]*.9,rgba[2]*.9,rgba[3]);
 
@@ -290,8 +293,8 @@ class Cube{
 
         gl.uniform4f(u_FragColor,rgba[0]*.9,rgba[1]*.9,rgba[2]*.9,rgba[3]);
 
-        drawTriangle3DUV([0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,1.0,0.0],[0,0, 0,0, 0,1]);
-        drawTriangle3DUV([0.0,1.0,1.0, 0.0,1.0,0.0, 0.0,0.0,1.0],[0,1, 0,1, 0,0]);
+        drawTriangle3DUV([0.0,0.0,0.0, 0.0,0.0,1.0, 0.0,1.0,0.0],[0,0, 0,1, 1,0]);
+        drawTriangle3DUV([0.0,1.0,1.0, 0.0,1.0,0.0, 0.0,0.0,1.0],[1,1, 1,0, 0,1]);
 
     }
 }
@@ -344,27 +347,43 @@ function initTextures(gl, n){
     // Get the storage location of the u_Sampler
     var image0 = new Image(); // Create an image object
     var image1 = new Image();
+    var image2 = new Image();
 
-    image0.onload = function(){ sendTextureToGLSL(0, u_Sampler0, image0); };
-    image0.src = images[0];
+    var texture0 = gl.createTexture(); // Create a texture object
+    var texture1 = gl.createTexture(); // Create a texture object
+    var texture2 = gl.createTexture();
 
-    image1.onload = function(){ sendTextureToGLSL(0, u_Sampler1, image1); };
-    image1.src = images[1];
+    image0.onload = function(){ sendTextureToGLSL(texture0, u_Sampler0, image0, 0); };
+    image0.src = "grass.jpg";
+
+    image1.onload = function(){ sendTextureToGLSL(texture1, u_Sampler1, image1, 1); };
+    image1.src = "sky.png";
+
+    image2.onload = function(){ sendTextureToGLSL(texture2, u_Sampler2, image2, 2); }
+    image2.src = "tie_dye.png";
 
     return true;
 }
 
-function sendTextureToGLSL(n,u_Sampler,image){
-    var texture = gl.createTexture(); // Create a texture object
-    
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,1);
-    gl.activeTexture(gl.TEXTURE0);
 
+function sendTextureToGLSL(texture,u_Sampler,image,texUnit){
+    console.log(texUnit)
+
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,1);
+    
+    if(texUnit == 0){
+        gl.activeTexture(gl.TEXTURE0);
+    } else if(texUnit == 1){
+        gl.activeTexture(gl.TEXTURE1);
+    } else if(texUnit == 2){
+        gl.activeTexture(gl.TEXTURE2);
+    }
+    
     gl.bindTexture(gl.TEXTURE_2D,texture);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image);
-    gl.uniform1i(u_Sampler,0);
+    gl.uniform1i(u_Sampler,texUnit);
 
     console.log("Finished load_texture");
 }
@@ -453,6 +472,12 @@ function connectVariablesToGLSL(){
         return;
       }
 
+      u_Sampler2 = gl.getUniformLocation(gl.program,'u_Sampler2');
+      if (!u_Sampler2) {
+        console.log("Failed to get the storage location of u_Sampler2");
+        return;
+      }
+
       //---------
 
       u_ModelMatrix = gl.getUniformLocation(gl.program,'u_ModelMatrix');
@@ -489,41 +514,9 @@ var g_at=[0,0,-100];
 var g_up=[0,1,0];
 
 
-function renderAllShapes(){
-    var startTime = performance.now();
-
-    var projMat = new Matrix4();
-    projMat.setPerspective(60,canvas.width/canvas.height,.1,100);
-    gl.uniformMatrix4fv(u_ProjectionMatrix,false,projMat.elements);
-
-    var viewMat = new Matrix4();
-    viewMat.setLookAt(g_eye[0],g_eye[1],g_eye[2], 0,0,-100, 0,1,0);
-    gl.uniformMatrix4fv(u_ViewMatrix,false,viewMat.elements);
-
-    var globalRotMat = new Matrix4().rotate(g_globalAngle,0,1,0);
-    gl.uniformMatrix4fv(u_GlobalRotateMatrix,false,globalRotMat.elements);
-
-    // Clear <canvas>
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    
-    var ground = new Cube();
-    ground.matrix.scale(100,.1,100)
-    ground.matrix.translate(-.05,-3,-.05);
-    ground.textureNum = 0;
-    ground.render();
-
-    var sky = new Cube();
-    sky.matrix.scale(100,100,100)
-    sky.matrix.translate(-.05,-.1,-.05);
-    sky.textureNum = 1;
-    sky.render();
-
-
-
-    /*
+function renderGnome(){
     var body = new Cube();
-    body.color = [1.0,0.0,1.0,1.0];
+    body.color = [1.0,0.0,0.0,1.0];
     body.matrix.translate(-.25,-.3,0.0);
     body.matrix.rotate(0,1,0,0)
     body.matrix.rotate(-g_bodyAngle,1,0,0)
@@ -618,7 +611,53 @@ function renderAllShapes(){
     eye3.matrix.translate(0.1,.2,-.05)
     eye3.matrix.scale(.12,.05,.05);
     eye3.render();
-    */
+}
+
+function renderAllShapes(){
+    var startTime = performance.now();
+
+    var projMat = new Matrix4();
+    projMat.setPerspective(60,canvas.width/canvas.height,.1,100);
+    gl.uniformMatrix4fv(u_ProjectionMatrix,false,projMat.elements);
+
+    var viewMat = new Matrix4();
+    viewMat.setLookAt(g_eye[0],g_eye[1],g_eye[2], 0,0,-100, 0,1,0);
+    gl.uniformMatrix4fv(u_ViewMatrix,false,viewMat.elements);
+
+    var globalRotMat = new Matrix4().rotate(g_globalAngle,0,1,0);
+    gl.uniformMatrix4fv(u_GlobalRotateMatrix,false,globalRotMat.elements);
+
+    // Clear <canvas>
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    
+    var ground = new Cube();
+    ground.color = [1,0,0,1];
+    ground.textureNum = 0;
+    ground.matrix.translate(0,-.75,0);
+    ground.matrix.scale(10,.01,10)
+    ground.matrix.translate(-.5,0,-.5);
+    ground.render();
+
+    var sky = new Cube();
+    sky.color = [1,0,0,1];
+    sky.textureNum = 1;
+    sky.matrix.scale(50,50,50);
+    sky.matrix.translate(-.5,-.5,-.5);
+    sky.render();
+
+    var theCube = new Cube();
+    theCube.textureNum = 2
+    theCube.matrix.translate(3,0,0);
+    theCube.render();
+
+    var theCube2 = new Cube();
+    theCube2.color = [1,0,1,1];
+    theCube2.matrix.translate(3,0,-2);
+    theCube2.render();
+
+    renderGnome();
+    
 
     //////////////////////////////////////////////////////////
 
